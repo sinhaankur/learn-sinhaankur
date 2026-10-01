@@ -10,6 +10,7 @@ export function Nav() {
         <div className="flex items-center gap-5 font-mono text-[11px] tracking-wide text-muted-foreground">
           <Link href="/#understand" className="hover:text-foreground">Understand the code</Link>
           <Link href="/#skills" className="hover:text-foreground">Skills</Link>
+          <Link href="/system" className="hover:text-foreground">How it works</Link>
           <a href="https://www.sinhaankur.com" className="hover:text-foreground">sinhaankur.com ↗</a>
         </div>
       </div>
