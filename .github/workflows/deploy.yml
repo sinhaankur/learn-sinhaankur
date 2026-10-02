@@ -1,13 +1,10 @@
-name: Deploy to Cloudflare Pages
+name: Deploy to GitHub Pages
 
-# Builds the static export and deploys the whole out/ to Cloudflare Pages on every
-# push to main — same reliable pipeline as the other subdomains (crossfit etc.),
-# off the flaky dashboard integration.
+# Static Next.js export (output: "export") → GitHub Pages. Same proven host as
+# sinhaankur.com. Every push to main builds out/ and publishes it. No Cloudflare,
+# no project-type confusion — Pages just serves the static files.
 #
-# ONE-TIME SETUP (repo → Settings → Secrets and variables → Actions):
-#   CLOUDFLARE_API_TOKEN   — a token with "Cloudflare Pages: Edit" permission
-#   CLOUDFLARE_ACCOUNT_ID  — your Cloudflare account id
-# And confirm the Pages project name below matches your project (default: learn-sinhaankur).
+# ONE-TIME SETUP: repo → Settings → Pages → Source = "GitHub Actions".
 
 on:
   push:
@@ -15,15 +12,17 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: pages-deploy
+  group: pages
   cancel-in-progress: false
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      deployments: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -47,13 +46,25 @@ jobs:
 
       - name: Verify the learning pages built (guards a blank deploy)
         run: |
-          test -f out/index.html || { echo "::error::home page missing from build"; exit 1; }
-          test -f out/system/index.html || { echo "::error::/system page missing from build"; exit 1; }
+          test -f out/index.html || { echo "::error::home page missing"; exit 1; }
+          test -f out/system/index.html || { echo "::error::/system page missing"; exit 1; }
           echo "built: home + /system ✓"
 
-      - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy out --project-name=learn-sinhaankur --branch=main
+          path: out
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
